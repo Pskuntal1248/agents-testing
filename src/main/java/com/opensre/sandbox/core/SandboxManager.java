@@ -22,12 +22,17 @@ import java.util.concurrent.TimeUnit;
 public class SandboxManager {
     
     private final Map<String, GenericContainer<?>> activeSandboxes = new ConcurrentHashMap<>();
+    private final Map<String, Network> sandboxNetworks = new ConcurrentHashMap<>();
 
     public String createSandbox(SandboxConfig config) {
         String sandboxId = UUID.randomUUID().toString();
         
         try {
+            Network network = Network.newNetwork();
+            sandboxNetworks.put(sandboxId, network);
+            
             GenericContainer<?> container = new GenericContainer<>(DockerImageName.parse(config.getImage()))
+                .withNetwork(network)
                 .withCreateContainerCmdModifier(cmd -> cmd
                     .withHostConfig(cmd.getHostConfig()
                         .withMemory(config.getMemoryLimitMB() * 1024 * 1024)
@@ -113,6 +118,7 @@ public class SandboxManager {
 
     public void destroySandbox(String sandboxId) {
         GenericContainer<?> container = activeSandboxes.remove(sandboxId);
+        Network network = sandboxNetworks.remove(sandboxId);
         
         if (container != null) {
             try {
@@ -122,10 +128,22 @@ public class SandboxManager {
                 System.err.println("Error stopping sandbox: " + e.getMessage());
             }
         }
+        
+        if (network != null) {
+            try {
+                network.close();
+            } catch (Exception e) {
+                System.err.println("Error closing network: " + e.getMessage());
+            }
+        }
     }
 
     public boolean exists(String sandboxId) {
         return activeSandboxes.containsKey(sandboxId);
+    }
+
+    public Network getNetwork(String sandboxId) {
+        return sandboxNetworks.get(sandboxId);
     }
 
     public void importGitRepo(String sandboxId, GitImportRequest request) {
