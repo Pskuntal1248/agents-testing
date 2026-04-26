@@ -13,9 +13,9 @@ CREATE TABLE facilities (
 );
 
 INSERT INTO users (username, email) VALUES
-    ('admin', 'admin@opensre.com'),
-    ('operator', 'operator@opensre.com'),
-    ('viewer', 'viewer@opensre.com');
+    ('admin', 'admin@srelab.ai'),
+    ('operator', 'operator@srelab.ai'),
+    ('viewer', 'viewer@srelab.ai');
 
 INSERT INTO facilities (name, location, capacity) VALUES
     ('Data Center Alpha', 'US-East-1', 1000),

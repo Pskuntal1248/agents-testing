@@ -1,7 +1,7 @@
-package com.opensre.sandbox.integration;
+package com.srelab.sandbox.integration;
 
-import com.opensre.sandbox.data.BYOCManager;
-import com.opensre.sandbox.data.DatabaseManager;
+import com.srelab.sandbox.data.BYOCManager;
+import com.srelab.sandbox.data.DatabaseManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
