@@ -10,7 +10,7 @@
         <version>3.2.0</version>
     </parent>
 
-    <groupId>com.opensre</groupId>
+    <groupId>com.srelab</groupId>
     <artifactId>byoc-app</artifactId>
     <version>1.0.0</version>
 
