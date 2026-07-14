@@ -27,6 +27,12 @@ public class BYOCManager {
                     .withMemory(512L * 1024 * 1024)
                     .withCpuQuota(50000L)
                     .withCapDrop(Capability.ALL)
+                    // NET_ADMIN is required for the db-timeout/cascading-timeout fault
+                    // injectors to run `tc qdisc` against the container's network
+                    // interface. This is the only capability re-added; the container
+                    // otherwise remains fully hardened (no-new-privileges, all other
+                    // caps dropped).
+                    .withCapAdd(Capability.NET_ADMIN)
                     .withSecurityOpts(java.util.List.of("no-new-privileges"))
                     .withTmpFs(Map.of("/tmp", "rw,noexec,nosuid,size=100m"))
                 )
@@ -45,6 +51,16 @@ public class BYOCManager {
             return "http://" + app.getHost() + ":" + app.getMappedPort(8080) + "/health";
         }
         return null;
+    }
+
+    /**
+     * Returns the real Docker container id for the deployed app (as opposed
+     * to the internal sandboxId key), needed by FaultInjector to exec/inspect
+     * against the actual running container.
+     */
+    public String getAppContainerId(String sandboxId) {
+        GenericContainer<?> app = apps.get(sandboxId);
+        return app != null ? app.getContainerId() : null;
     }
 
     public void destroyApp(String sandboxId) {
