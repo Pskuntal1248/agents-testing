@@ -63,12 +63,33 @@ public class SandboxManager {
         if (container == null) {
             throw new IllegalArgumentException("Sandbox not found: " + sandboxId);
         }
+        return executeCommandInContainer(container.getDockerClient(), container.getContainerId(), command, timeoutSeconds);
+    }
+
+    /**
+     * Executes a command against an arbitrary running container by its real
+     * Docker container id, rather than an internally-tracked sandboxId. Used
+     * by the AI agent to operate against the deployed BYOC app container,
+     * which is tracked separately (by BYOCManager) from the sandboxes this
+     * class manages directly.
+     */
+    public CommandResponse executeCommandByContainerId(String containerId, String command, int timeoutSeconds) {
+        var config = com.github.dockerjava.core.DefaultDockerClientConfig.createDefaultConfigBuilder().build();
+        var httpClient = new com.github.dockerjava.zerodep.ZerodepDockerHttpClient.Builder()
+            .dockerHost(config.getDockerHost())
+            .build();
+        var dockerClient = com.github.dockerjava.core.DockerClientImpl.getInstance(config, httpClient);
+        return executeCommandInContainer(dockerClient, containerId, command, timeoutSeconds);
+    }
+
+    private CommandResponse executeCommandInContainer(
+            com.github.dockerjava.api.DockerClient dockerClient, String containerId, String command, int timeoutSeconds) {
 
         long startTime = System.currentTimeMillis();
-        
+
         try {
-            ExecCreateCmdResponse execCreateCmdResponse = container.getDockerClient()
-                .execCreateCmd(container.getContainerId())
+            ExecCreateCmdResponse execCreateCmdResponse = dockerClient
+                .execCreateCmd(containerId)
                 .withAttachStdout(true)
                 .withAttachStderr(true)
                 .withCmd("/bin/sh", "-c", command)
@@ -77,7 +98,7 @@ public class SandboxManager {
             ByteArrayOutputStream stdout = new ByteArrayOutputStream();
             ByteArrayOutputStream stderr = new ByteArrayOutputStream();
 
-            container.getDockerClient()
+            dockerClient
                 .execStartCmd(execCreateCmdResponse.getId())
                 .exec(new com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.Frame>() {
                     @Override
@@ -94,11 +115,15 @@ public class SandboxManager {
                 })
                 .awaitCompletion(timeoutSeconds, TimeUnit.SECONDS);
 
-            Integer exitCode = container.getDockerClient()
+            Long exitCodeLong = dockerClient
                 .inspectExecCmd(execCreateCmdResponse.getId())
                 .exec()
-                .getExitCodeLong()
-                .intValue();
+                .getExitCodeLong();
+            // getExitCodeLong() can return null if the exec never completed (e.g. the
+            // container died mid-command, such as an agent killing PID 1). Treat that
+            // as a non-zero/unknown failure rather than throwing an NPE, so a single
+            // failed tool call doesn't crash the whole agent loop with a confusing error.
+            int exitCode = exitCodeLong != null ? exitCodeLong.intValue() : -1;
 
             long executionTime = System.currentTimeMillis() - startTime;
 
