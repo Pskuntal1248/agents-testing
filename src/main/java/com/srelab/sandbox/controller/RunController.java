@@ -1,5 +1,6 @@
 package com.srelab.sandbox.controller;
 
+import com.srelab.sandbox.model.InvalidRunRequestException;
 import com.srelab.sandbox.model.RunStatus;
 import com.srelab.sandbox.model.StartRunRequest;
 import com.srelab.sandbox.service.RunEventBus;
@@ -44,6 +45,11 @@ public class RunController {
     @PostMapping
     public ResponseEntity<Map<String, String>> startRun(@RequestBody StartRunRequest request) {
         request.setAutoStartAgent(false);
+        try {
+            request.validate();
+        } catch (InvalidRunRequestException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
         String runId = UUID.randomUUID().toString();
         executor.submit(() -> runService.startRun(runId, request, event -> eventBus.publish(runId, event)));
         return ResponseEntity.ok(Map.of("runId", runId));
@@ -68,6 +74,12 @@ public class RunController {
         request.setDurationSeconds(durationSeconds);
         request.setZipBytes(file.getBytes());
         request.setAutoStartAgent(false);
+
+        try {
+            request.validate();
+        } catch (InvalidRunRequestException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
 
         String runId = UUID.randomUUID().toString();
         executor.submit(() -> runService.startRun(runId, request, event -> eventBus.publish(runId, event)));

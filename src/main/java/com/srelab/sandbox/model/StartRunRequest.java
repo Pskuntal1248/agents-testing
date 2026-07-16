@@ -51,4 +51,50 @@ public class StartRunRequest {
     public void setZipBytes(byte[] zipBytes) { this.zipBytes = zipBytes; }
     public boolean isAutoStartAgent() { return autoStartAgent; }
     public void setAutoStartAgent(boolean autoStartAgent) { this.autoStartAgent = autoStartAgent; }
+
+    private static final java.util.Set<String> VALID_FAULTS = java.util.Set.of(
+        "db-timeout", "memory-starvation", "config-corruption",
+        "connection-pool-exhaustion", "silent-data-corruption", "n1-query", "cascading-timeout"
+    );
+
+    /**
+     * Rejects the request before any Docker/sandbox work starts. In
+     * particular, this closes a real gap where a run with no target image
+     * and no code-import source (no repoUrl, no zipBytes, no pastedFileContent)
+     * would previously be accepted and silently deploy the target image
+     * completely unmodified -- defeating the entire "bring your own code"
+     * premise of a run without any error or warning.
+     */
+    public void validate() {
+        if (target == null || target.isBlank()) {
+            throw new InvalidRunRequestException("target is required (e.g. \"byoc-app:test\")");
+        }
+        if (fault == null || fault.isBlank()) {
+            throw new InvalidRunRequestException("fault is required");
+        }
+        if (!VALID_FAULTS.contains(fault)) {
+            throw new InvalidRunRequestException(
+                "Unknown fault: \"" + fault + "\". Valid values: " + VALID_FAULTS);
+        }
+        if (durationSeconds <= 0) {
+            throw new InvalidRunRequestException("durationSeconds must be positive");
+        }
+
+        boolean hasRepo = repoUrl != null && !repoUrl.isBlank();
+        boolean hasZip = zipBytes != null && zipBytes.length > 0;
+        boolean hasPastedFile = pastedFileContent != null && !pastedFileContent.isBlank();
+
+        if (!hasRepo && !hasZip && !hasPastedFile) {
+            throw new InvalidRunRequestException(
+                "No code source provided. Provide exactly one of: repoUrl, a zip upload, or pastedFileContent. "
+                    + "A run with no code import would silently deploy the target image unmodified, "
+                    + "which is never what you want when testing your own code.");
+        }
+
+        int sourceCount = (hasRepo ? 1 : 0) + (hasZip ? 1 : 0) + (hasPastedFile ? 1 : 0);
+        if (sourceCount > 1) {
+            throw new InvalidRunRequestException(
+                "Multiple code sources provided (repoUrl / zip / pastedFileContent). Provide exactly one.");
+        }
+    }
 }
