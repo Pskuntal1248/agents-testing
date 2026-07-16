@@ -5,8 +5,6 @@ target/
 
 kiro.md
 
-readme.md
-
 # Secrets - never commit API keys or credentials
 .env
 .env.*
