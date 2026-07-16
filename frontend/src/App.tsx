@@ -9,7 +9,6 @@ import { ReportPanel } from "./components/ReportPanel";
 import { useRunEvents } from "./hooks/useRunEvents";
 import { useRunStatus } from "./hooks/useRunStatus";
 import { startRunFromJson, startRunFromZip, triggerAgent, ApiError } from "./api/runApi";
-import "./App.css";
 
 const DEFAULT_SOURCE: SourceValue = {
   mode: "git",
@@ -94,20 +93,20 @@ function App() {
   const runInFlight = status !== null && status.phase !== "COMPLETED" && status.phase !== "FAILED";
 
   return (
-    <div className="app-shell">
-      <header className="app-header">
-        <h1>SRElab AI</h1>
-        <p className="app-subtitle">Sandboxed fault injection and AI agent benchmarking</p>
+    <div className="max-w-[1400px] mx-auto px-6 pt-6 pb-8 text-black bg-white min-h-screen">
+      <header className="mb-5 border-b border-border pb-4">
+        <h1 className="m-0 text-xl font-bold text-navy tracking-tight">SRElab AI</h1>
+        <p className="mt-1 mb-0 text-[13px] text-muted">Sandboxed fault injection and AI agent benchmarking</p>
       </header>
 
       {errorBanner && (
-        <div className="error-banner" role="alert">
+        <div role="alert" className="bg-white border border-danger text-danger rounded p-3 mb-4 text-[13px]">
           {errorBanner}
         </div>
       )}
 
-      <div className="app-grid">
-        <div className="app-column">
+      <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr_340px] gap-4 items-start">
+        <div className="flex flex-col gap-4">
           <SourcePanel value={source} onChange={setSource} disabled={runInFlight} />
           <ConfigPanel value={config} onChange={setConfig} disabled={runInFlight} />
           <RunControls
@@ -120,11 +119,11 @@ function App() {
           />
         </div>
 
-        <div className="app-column">
+        <div className="flex flex-col gap-4">
           <EventLogPanel events={events} connected={connected} />
         </div>
 
-        <div className="app-column">
+        <div className="flex flex-col gap-4">
           <ReportPanel report={status?.report ?? null} />
         </div>
       </div>

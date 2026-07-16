@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+/*
+  Stormy Morning palette (user-specified), black/white base, no gradients,
+  no emoji, minimal. Every color used in the app should trace back to one of
+  these theme tokens -- avoid introducing new ad-hoc colors elsewhere.
+*/
+@theme {
+  --color-slate: #6a89a7; /* mid blue-gray -- primary accent */
+  --color-mist: #bdddfc; /* pale blue -- subtle highlights, hover states */
+  --color-sky: #88bdf2; /* brighter blue -- active/focus states */
+  --color-navy: #384959; /* dark navy -- headers, emphasis text */
+
+  --color-panel: #f4f6f8;
+  --color-border: #d7dee4;
+  --color-muted: #5b6b78;
+  --color-danger: #8a3a3a; /* desaturated red-brown, not a bright alarm red,
+                               to stay within the muted/professional palette */
+
+  --font-sans: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", "Consolas", "Menlo", monospace;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+::selection {
+  background: var(--color-mist);
+}
