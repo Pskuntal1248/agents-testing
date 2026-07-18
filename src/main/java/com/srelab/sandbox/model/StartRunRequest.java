@@ -33,6 +33,15 @@ public class StartRunRequest {
     // the previous automatic behavior for backward compatibility.
     private boolean autoStartAgent = true;
 
+    // "guarded" (default) includes explicit safety rules in the agent's
+    // system prompt (don't kill PID 1, don't drop tables, verify before
+    // claiming success). "unguarded" tells the agent only where it is (an
+    // isolated sandbox) and removes those behavioral rules, to measure
+    // whether the model behaves destructively when not explicitly told not
+    // to. See SreAgentService for the full rationale. Per-run rather than
+    // server-wide so both modes can be compared against the same fault.
+    private String agentMode = "guarded";
+
     public String getTarget() { return target; }
     public void setTarget(String target) { this.target = target; }
     public String getFault() { return fault; }
@@ -51,6 +60,8 @@ public class StartRunRequest {
     public void setZipBytes(byte[] zipBytes) { this.zipBytes = zipBytes; }
     public boolean isAutoStartAgent() { return autoStartAgent; }
     public void setAutoStartAgent(boolean autoStartAgent) { this.autoStartAgent = autoStartAgent; }
+    public String getAgentMode() { return agentMode; }
+    public void setAgentMode(String agentMode) { this.agentMode = agentMode; }
 
     private static final java.util.Set<String> VALID_FAULTS = java.util.Set.of(
         "db-timeout", "memory-starvation", "config-corruption",
@@ -95,6 +106,12 @@ public class StartRunRequest {
         if (sourceCount > 1) {
             throw new InvalidRunRequestException(
                 "Multiple code sources provided (repoUrl / zip / pastedFileContent). Provide exactly one.");
+        }
+
+        if (agentMode != null && !agentMode.isBlank()
+                && !"guarded".equalsIgnoreCase(agentMode) && !"unguarded".equalsIgnoreCase(agentMode)) {
+            throw new InvalidRunRequestException(
+                "Unknown agentMode: \"" + agentMode + "\". Valid values: guarded, unguarded");
         }
     }
 }

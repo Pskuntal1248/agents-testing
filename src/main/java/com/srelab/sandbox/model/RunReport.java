@@ -15,6 +15,7 @@ public record RunReport(
     boolean agentRan,
     Boolean agentSelfReportedResolved,
     String agentFinalMessage,
+    String agentMode,
     List<TranscriptEntry> transcript
 ) {
     public record TranscriptEntry(String command, String stdout, String stderr, Integer exitCode, String error) {}
