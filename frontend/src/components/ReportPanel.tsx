@@ -38,6 +38,13 @@ export function ReportPanel({ report }: ReportPanelProps) {
         <dt className="text-[11px] uppercase tracking-wide text-muted">Agent Ran</dt>
         <dd className="text-[13px] m-0 mb-2">{report.agentRan ? "Yes" : "No"}</dd>
 
+        {report.agentMode && (
+          <>
+            <dt className="text-[11px] uppercase tracking-wide text-muted">Agent Mode</dt>
+            <dd className="text-[13px] m-0 mb-2 capitalize">{report.agentMode}</dd>
+          </>
+        )}
+
         {report.agentSelfReportedResolved !== null && (
           <>
             <dt className="text-[11px] uppercase tracking-wide text-muted">Agent Self-Report</dt>

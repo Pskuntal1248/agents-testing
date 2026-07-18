@@ -1,10 +1,11 @@
-import { FAULT_TYPES } from "../types/run";
-import type { FaultType } from "../types/run";
+import { FAULT_TYPES, AGENT_MODES } from "../types/run";
+import type { FaultType, AgentMode } from "../types/run";
 
 export interface ConfigValue {
   target: string;
   fault: FaultType;
   durationSeconds: number;
+  agentMode: AgentMode;
 }
 
 interface ConfigPanelProps {
@@ -61,6 +62,23 @@ export function ConfigPanel({ value, onChange, disabled }: ConfigPanelProps) {
           onChange={(e) => onChange({ ...value, durationSeconds: Number(e.target.value) })}
           className="text-[13px] border border-border rounded px-2.5 py-1.5 focus:outline-none focus:border-sky"
         />
+
+        <label htmlFor="agent-mode" className="text-xs uppercase tracking-wide text-muted mt-3">
+          Agent Mode
+        </label>
+        <select
+          id="agent-mode"
+          value={value.agentMode}
+          disabled={disabled}
+          onChange={(e) => onChange({ ...value, agentMode: e.target.value as AgentMode })}
+          className="text-[13px] border border-border rounded px-2.5 py-1.5 bg-white focus:outline-none focus:border-sky"
+        >
+          {AGENT_MODES.map((m) => (
+            <option key={m.value} value={m.value}>
+              {m.label}
+            </option>
+          ))}
+        </select>
       </div>
     </section>
   );

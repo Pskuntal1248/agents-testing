@@ -1,4 +1,4 @@
-import type { RunEvent, RunStatus, StartRunJsonRequest } from "../types/run";
+import type { AgentMode, RunEvent, RunStatus, StartRunJsonRequest } from "../types/run";
 
 // Backend base URL. Kept as a plain constant (not env-driven yet) since the
 // Spring Boot service always runs on localhost:8080 in this project's setup;
@@ -45,13 +45,15 @@ export async function startRunFromZip(
   file: File,
   target: string,
   fault: string,
-  durationSeconds: number
+  durationSeconds: number,
+  agentMode: AgentMode = "guarded"
 ): Promise<{ runId: string }> {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("target", target);
   formData.append("fault", fault);
   formData.append("durationSeconds", String(durationSeconds));
+  formData.append("agentMode", agentMode);
 
   const res = await fetch(`${API_BASE}/upload`, {
     method: "POST",
