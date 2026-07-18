@@ -82,6 +82,33 @@ public class SandboxManager {
         return executeCommandInContainer(dockerClient, containerId, command, timeoutSeconds);
     }
 
+    /**
+     * Restarts a container by its real Docker container id, from OUTSIDE the
+     * container (a real "docker restart", not an in-container process kill).
+     *
+     * This exists because a running app whose ENTRYPOINT is a bare process
+     * (e.g. `java -jar app.jar`, PID 1, no supervisor) cannot meaningfully be
+     * "restarted" from inside itself via a single docker-exec call: killing
+     * PID 1 permanently takes the container down (nothing restarts it), and
+     * launching a second foreground process via a timeout-bound exec doesn't
+     * replace the original, doesn't free the port, and routinely gets cut
+     * off mid-startup. A real SRE facing this exact situation (e.g. a K8s
+     * pod, a systemd unit) restarts the process via the orchestrator/init
+     * system, not by hand-rolling a second instance inside the same process
+     * namespace -- this method gives the agent that same real capability,
+     * scoped to exactly the one container it's already allowed to act on.
+     */
+    public void restartContainerById(String containerId, int timeoutSeconds) {
+        var config = com.github.dockerjava.core.DefaultDockerClientConfig.createDefaultConfigBuilder().build();
+        var httpClient = new com.github.dockerjava.zerodep.ZerodepDockerHttpClient.Builder()
+            .dockerHost(config.getDockerHost())
+            .build();
+        var dockerClient = com.github.dockerjava.core.DockerClientImpl.getInstance(config, httpClient);
+        dockerClient.restartContainerCmd(containerId)
+            .withTimeout(timeoutSeconds)
+            .exec();
+    }
+
     private CommandResponse executeCommandInContainer(
             com.github.dockerjava.api.DockerClient dockerClient, String containerId, String command, int timeoutSeconds) {
 

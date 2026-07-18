@@ -66,7 +66,8 @@ public class RunController {
             @RequestParam("file") MultipartFile file,
             @RequestParam String target,
             @RequestParam String fault,
-            @RequestParam(defaultValue = "300") int durationSeconds) throws IOException {
+            @RequestParam(defaultValue = "300") int durationSeconds,
+            @RequestParam(defaultValue = "guarded") String agentMode) throws IOException {
 
         StartRunRequest request = new StartRunRequest();
         request.setTarget(target);
@@ -74,6 +75,7 @@ public class RunController {
         request.setDurationSeconds(durationSeconds);
         request.setZipBytes(file.getBytes());
         request.setAutoStartAgent(false);
+        request.setAgentMode(agentMode);
 
         try {
             request.validate();
