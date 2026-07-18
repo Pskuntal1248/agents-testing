@@ -255,12 +255,30 @@ public class RunService {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
                 if (entry.isDirectory()) continue;
+                if (isMacMetadataEntry(entry.getName())) continue;
                 ByteArrayOutputStream entryContent = new ByteArrayOutputStream();
                 zis.transferTo(entryContent);
                 entries.put(entry.getName(), entryContent.toByteArray());
             }
         }
         return buildTarGzFromBytes(entries);
+    }
+
+    /**
+     * Filters out macOS Finder/Archive Utility metadata that ends up inside
+     * a zip created via "Compress" on a Mac: a __MACOSX/ sibling tree full
+     * of AppleDouble resource-fork files (._Foo.java alongside every real
+     * Foo.java). These are never legitimate source files, and their
+     * combined path length (e.g. "__MACOSX/deeply/nested/project/._File.java")
+     * routinely exceeds the classic tar format's 100-byte filename limit,
+     * which previously surfaced as a confusing
+     * "file name '...' is too long ( > 100 bytes)" error that had nothing
+     * to do with the user's actual code.
+     */
+    private static boolean isMacMetadataEntry(String entryName) {
+        if (entryName.startsWith("__MACOSX/")) return true;
+        String fileName = entryName.substring(entryName.lastIndexOf('/') + 1);
+        return fileName.startsWith("._") || fileName.equals(".DS_Store");
     }
 
     private static byte[] buildTarGz(Map<String, byte[]> filesByPath) throws IOException {
@@ -271,6 +289,12 @@ public class RunService {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (var gzip = new java.util.zip.GZIPOutputStream(out);
              var tar = new org.apache.commons.compress.archivers.tar.TarArchiveOutputStream(gzip)) {
+            // Defense in depth: even after filtering macOS metadata, a
+            // legitimately long path from a real project could still exceed
+            // the classic tar format's 100-byte filename limit. GNU longfile
+            // mode transparently splits long names across an extra header
+            // entry instead of throwing.
+            tar.setLongFileMode(org.apache.commons.compress.archivers.tar.TarArchiveOutputStream.LONGFILE_GNU);
             for (var entry : filesByPath.entrySet()) {
                 var tarEntry = new org.apache.commons.compress.archivers.tar.TarArchiveEntry(entry.getKey());
                 tarEntry.setSize(entry.getValue().length);
@@ -319,19 +343,24 @@ public class RunService {
         boolean agentRan = false;
         Boolean agentSelfReportedResolved = null;
         String agentFinalMessage = null;
+        String agentMode = null;
         List<AgentTranscript.Entry> transcriptEntries = List.of();
 
         try {
-            AIAgent.AgentRunResult agentResult = ctx.agent.run(ctx.status.getAppContainerId(), ctx.status.getHealthUrl());
+            boolean unguarded = "unguarded".equalsIgnoreCase(ctx.request.getAgentMode());
+            AIAgent.AgentRunResult agentResult = ctx.agent.run(
+                ctx.status.getAppContainerId(), ctx.status.getHealthUrl(), unguarded);
             agentRan = true;
             agentSelfReportedResolved = agentResult.resolved();
             agentFinalMessage = agentResult.finalMessage();
+            agentMode = agentResult.mode();
             transcriptEntries = agentResult.transcript().getEntries();
             for (var entry : transcriptEntries) {
                 ctx.evaluator.recordCommand();
                 emit.accept(RunEvent.of(RunEvent.AGENT_ACTION, describeEntry(entry)));
             }
-            emit.accept(RunEvent.of(RunEvent.LOG, "Agent finished. Self-reported resolved=" + agentResult.resolved()));
+            emit.accept(RunEvent.of(RunEvent.LOG,
+                "Agent finished (" + agentMode + " mode). Self-reported resolved=" + agentResult.resolved()));
         } catch (IllegalStateException e) {
             emit.accept(RunEvent.of(RunEvent.LOG, "Agent could not run: " + e.getMessage()));
         } catch (Exception e) {
@@ -357,6 +386,7 @@ public class RunService {
             agentRan,
             agentSelfReportedResolved,
             agentFinalMessage,
+            agentMode,
             reportTranscript
         );
         ctx.status.setReport(report);
