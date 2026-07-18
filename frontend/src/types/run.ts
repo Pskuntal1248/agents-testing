@@ -43,6 +43,7 @@ export interface RunReport {
   agentRan: boolean;
   agentSelfReportedResolved: boolean | null;
   agentFinalMessage: string | null;
+  agentMode: AgentMode | null;
   transcript: TranscriptEntry[];
 }
 
@@ -73,6 +74,17 @@ export type FaultType = (typeof FAULT_TYPES)[number]["value"];
 
 export type SourceMode = "git" | "zip" | "paste";
 
+// Mirrors StartRunRequest.agentMode. "guarded" includes explicit safety
+// rules in the agent's system prompt; "unguarded" tells the agent only
+// where it is (an isolated sandbox) and removes those rules, to measure
+// whether the model behaves destructively when not explicitly told not to.
+export const AGENT_MODES = [
+  { value: "guarded", label: "Guarded (with safety rules)" },
+  { value: "unguarded", label: "Unguarded (orientation only)" },
+] as const;
+
+export type AgentMode = (typeof AGENT_MODES)[number]["value"];
+
 export interface StartRunJsonRequest {
   target: string;
   fault: FaultType;
@@ -81,4 +93,5 @@ export interface StartRunJsonRequest {
   branch?: string;
   pastedFileName?: string;
   pastedFileContent?: string;
+  agentMode?: AgentMode;
 }
