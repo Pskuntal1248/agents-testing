@@ -23,6 +23,7 @@ const DEFAULT_CONFIG: ConfigValue = {
   target: "byoc-app:test",
   fault: "db-timeout",
   durationSeconds: 60,
+  agentMode: "guarded",
 };
 
 function App() {
@@ -57,7 +58,13 @@ function App() {
           setErrorBanner("Select a zip file before starting the run.");
           return;
         }
-        result = await startRunFromZip(source.zipFile, config.target, config.fault, config.durationSeconds);
+        result = await startRunFromZip(
+          source.zipFile,
+          config.target,
+          config.fault,
+          config.durationSeconds,
+          config.agentMode
+        );
       } else {
         result = await startRunFromJson({
           target: config.target,
@@ -67,6 +74,7 @@ function App() {
           branch: source.mode === "git" ? source.branch : undefined,
           pastedFileName: source.mode === "paste" ? source.pastedFileName : undefined,
           pastedFileContent: source.mode === "paste" ? source.pastedFileContent : undefined,
+          agentMode: config.agentMode,
         });
       }
       setRunId(result.runId);
