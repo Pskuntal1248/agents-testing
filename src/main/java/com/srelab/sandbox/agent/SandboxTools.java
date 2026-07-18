@@ -64,6 +64,31 @@ public class SandboxTools {
         return executeShellCommand(command);
     }
 
+    @Tool("Restart the target application's container from the outside (equivalent to `docker restart`). " +
+          "Use this when the application's main process needs to be restarted for a fix to take effect " +
+          "(e.g. after fixing a config file, resource limit, or connection setting). This is the ONLY " +
+          "reliable way to restart the application -- running a second copy of the app process yourself " +
+          "via executeShellCommand will NOT work: it does not replace the original process, does not free " +
+          "the port the original is using, and can be cut off by the command timeout before startup " +
+          "completes. Do NOT attempt to kill PID 1 or launch a second instance of the app as a substitute " +
+          "for this tool. After calling this, wait a few seconds and use checkHealthEndpoint to verify the " +
+          "restart actually resolved the issue -- restarting does not fix an unresolved root cause, it only " +
+          "re-applies whatever configuration/state currently exists.")
+    public String restartApplication() {
+        String command = "docker-restart";
+        transcript.recordCommand(command);
+        try {
+            sandboxManager.restartContainerById(targetContainerId, 30);
+            CommandResponse response = new CommandResponse(0, "container restarted", "", 0);
+            transcript.recordResult(command, response);
+            return "Container restarted successfully.";
+        } catch (Exception e) {
+            String error = "Restart failed: " + e.getMessage();
+            transcript.recordFailure(command, error);
+            return error;
+        }
+    }
+
     private String truncate(String text) {
         if (text == null) return "";
         int max = 4000;
